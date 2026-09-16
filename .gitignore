@@ -1,0 +1,9 @@
+.venv/
+.env
+__pycache__/
+*.pyc
+*.mp3
+*.mp4
+client_secret.json
+credentials.json
+output/
