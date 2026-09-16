@@ -1,11 +1,13 @@
 import os
 import json
 import random
+import threading
 import time
 import tempfile
 from pathlib import Path
 from typing import Any, Dict, List
 
+from flask import Flask, jsonify
 import requests
 import schedule
 from dotenv import load_dotenv
@@ -32,9 +34,22 @@ TOPIC_POOL = [
     "surprising history facts",
     "mind-blowing nature facts",
     "strange human body facts",
-    "unusual technology facts",
     "fun facts about animals",
 ]
+
+app = Flask(__name__)
+_scheduler_started = False
+_scheduler_lock = threading.Lock()
+
+
+@app.get("/")
+def index():
+    return jsonify({"status": "ok", "service": "youtube-automation"})
+
+
+@app.get("/health")
+def health_check():
+    return jsonify({"status": "healthy"})
 
 
 def ensure_dirs() -> Dict[str, Path]:
@@ -44,6 +59,8 @@ def ensure_dirs() -> Dict[str, Path]:
     temp_dir = output_dir / "temp"
 
     for path in [output_dir, audio_dir, video_dir, temp_dir]:
+
+
         path.mkdir(parents=True, exist_ok=True)
 
     return {
@@ -307,18 +324,27 @@ def run_single_pipeline() -> Dict[str, Any]:
     return payload
 
 
-def main() -> None:
+def scheduler_loop() -> None:
     schedule_time = os.getenv("SCHEDULE_TIME", "18:00")
     schedule.every().day.at(schedule_time).do(run_single_pipeline)
-
-    if os.getenv("RUN_ONCE", "false").lower() == "true":
-        run_single_pipeline()
-        return
 
     print(f"Scheduler started. Daily time: {schedule_time}")
     while True:
         schedule.run_pending()
         time.sleep(60)
+
+
+def start_scheduler() -> None:
+    global _scheduler_started
+    with _scheduler_lock:
+        if _scheduler_started:
+            return
+        _scheduler_started = True
+        scheduler_thread = threading.Thread(target=scheduler_loop, daemon=True)
+        scheduler_thread.start()
+
+
+start_scheduler()
 
 
 if __name__ == "__main__":
@@ -328,5 +354,8 @@ if __name__ == "__main__":
     parser.add_argument("--once", action="store_true", help="One-time run instead of scheduler")
     args = parser.parse_args()
 
-    os.environ["RUN_ONCE"] = str(args.once).lower()
-    main()
+    if args.once:
+        run_single_pipeline()
+    else:
+        port = int(os.getenv("PORT", "8080"))
+        app.run(host="0.0.0.0", port=port)

@@ -1,1 +1,1 @@
-worker: python youtube_automation.py
+web: gunicorn --bind 0.0.0.0:$PORT youtube_automation:app
