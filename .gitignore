@@ -6,4 +6,5 @@ __pycache__/
 *.mp4
 client_secret.json
 credentials.json
+token.pickle
 output/

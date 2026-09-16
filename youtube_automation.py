@@ -10,7 +10,7 @@ import requests
 import schedule
 from dotenv import load_dotenv
 from gtts import gTTS
-from moviepy.editor import AudioFileClip, VideoFileClip
+from moviepy import AudioFileClip, VideoFileClip
 from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import InstalledAppFlow
